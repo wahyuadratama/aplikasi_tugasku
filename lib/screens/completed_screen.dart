@@ -58,6 +58,25 @@ class _CompletedScreenState extends State<CompletedScreen> {
     await NotificationService.cancelReminder(task.id);
     if (!mounted) return;
     _load();
+    
+    // Show undo snackbar
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('Tugas dihapus'),
+        action: SnackBarAction(
+          label: 'Urungkan',
+          onPressed: () async {
+            final all = await TaskStorage.loadTasks();
+            all.add(task);
+            await TaskStorage.saveTasks(all);
+            if (!mounted) return;
+            _load();
+          },
+        ),
+        duration: const Duration(seconds: 4),
+      ),
+    );
   }
 
   // Edit tugas selesai: ubah datanya lalu simpan ke storage.
@@ -92,7 +111,7 @@ class _CompletedScreenState extends State<CompletedScreen> {
                   task: t,
                   onToggle: (v) => _toggle(t, v),
                   onTap: () => _openEditor(t),
-                  onDelete: () => _delete(t),
+                  onDelete: (task) => _delete(task),
                 );
               },
             ),

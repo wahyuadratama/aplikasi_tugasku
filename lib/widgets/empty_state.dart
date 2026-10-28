@@ -30,7 +30,7 @@ class EmptyState extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               type.subtitle,
-              style: textTheme.bodyMedium?.copyWith(color: const Color(0xFF8A8A9E)),
+              style: textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
               textAlign: TextAlign.center,
             ),
           ],

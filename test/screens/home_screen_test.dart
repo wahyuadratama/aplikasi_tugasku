@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tugasku/screens/home_screen.dart';
+import 'package:tugasku/widgets/task_card.dart';
 
 const String _key = 'tugasku_tasks';
 
@@ -89,7 +90,13 @@ void main() {
     await tester.pumpWidget(const MaterialApp(home: HomeScreen()));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byType(Checkbox).first);
+    final sem = find.bySemanticsLabel('toggle task');
+    if (sem.evaluate().isNotEmpty) {
+      await tester.tap(sem.first);
+    } else {
+      final card = find.byType(TaskCard).first;
+      await tester.tap(find.descendant(of: card, matching: find.byType(InkWell)).first);
+    }
     await tester.pumpAndSettle();
 
     expect(find.text('Tugas Aktif 0'), findsNothing);

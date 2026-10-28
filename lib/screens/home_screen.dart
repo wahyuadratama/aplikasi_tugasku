@@ -7,6 +7,7 @@ import '../services/notification_service.dart';
 import '../services/task_storage.dart';
 import '../utils/app_router.dart';
 import '../widgets/empty_state.dart';
+import '../widgets/staggered_item.dart';
 import '../widgets/task_card.dart';
 import 'add_task_screen.dart';
 import 'completed_screen.dart';
@@ -15,13 +16,14 @@ import 'settings_screen.dart';
 const String _allCategoriesKey = '__all__';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final bool showAppBar;
+  const HomeScreen({super.key, this.showAppBar = true});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  State<HomeScreen> createState() => HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class HomeScreenState extends State<HomeScreen> {
   List<Task> _tasks = [];
   String _filter = _allCategoriesKey;
   TaskSort _sort = TaskSort.manual;
@@ -115,6 +117,24 @@ class _HomeScreenState extends State<HomeScreen> {
     });
     NotificationService.cancelReminder(task.id);
     _save();
+    
+    // Show undo snackbar
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('Tugas dihapus'),
+        action: SnackBarAction(
+          label: 'Urungkan',
+          onPressed: () {
+            setState(() {
+              _tasks.add(task);
+              _normalizeFilter();
+            });
+            _save();
+          },
+        ),
+        duration: const Duration(seconds: 4),
+      ),
+    );
   }
 
   // Buka layar tambah/edit; kalau kembali dengan hasil, simpan.
@@ -137,26 +157,38 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _showSortMenu() {
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Urutkan Tugas'),
-        content: Column(
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
           mainAxisSize: MainAxisSize.min,
-          children: TaskSort.values.map((s) {
-            return RadioListTile<TaskSort>(
-              title: Text(s.label),
-              value: s,
-              groupValue: _sort,
-              onChanged: (value) {
-                if (value != null) {
-                  setState(() => _sort = value);
-                  TaskStorage.saveSort(value);
+          children: [
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: Text(
+                'Urutkan Tugas',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              ),
+            ),
+            ...TaskSort.values.map((s) {
+              final selected = s == _sort;
+              return ListTile(
+                title: Text(s.label),
+                trailing: selected
+                    ? const Icon(Icons.check, color: Color(0xFF6C63FF))
+                    : null,
+                onTap: () {
+                  setState(() => _sort = s);
+                  TaskStorage.saveSort(s);
                   Navigator.pop(ctx);
-                }
-              },
-            );
-          }).toList(),
+                },
+              );
+            }),
+            const SizedBox(height: 8),
+          ],
         ),
       ),
     );
@@ -164,6 +196,108 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final body = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (_active.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            child: _ProgressCard(
+              total: _active.length,
+              done: _tasks.where((t) => t.isDone).length,
+            ),
+          ),
+        if (widget.showAppBar)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+            child: Text(
+              'Daftar tugasmu',
+              style: TextStyle(
+                  fontSize: 16, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
+            ),
+          ),
+        SizedBox(
+          height: 44,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            itemCount: _categories.length,
+            itemBuilder: (ctx, i) {
+              final c = _categories[i];
+              final selected = c.key == _filter;
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: ChoiceChip(
+                  label: Text(c.label),
+                  selected: selected,
+                  selectedColor: const Color(0xFF6C63FF),
+                  labelStyle: TextStyle(
+                    color: selected
+                        ? Colors.white
+                        : Theme.of(context).colorScheme.onSurface,
+                  ),
+                  onSelected: (_) =>
+                      setState(() => _filter = c.key),
+                ),
+              );
+            },
+          ),
+        ),
+        Expanded(
+          child: _visible.isEmpty
+              ? EmptyState(
+                  type: _active.isEmpty
+                      ? EmptyStateType.noTasks
+                      : EmptyStateType.noFiltered,
+                )
+              : ListView.builder(
+                  itemCount: _visible.length,
+                  itemBuilder: (ctx, i) {
+                    final t = _visible[i];
+                    return StaggeredItem(
+                      index: i,
+                      child: TaskCard(
+                        task: t,
+                        onToggle: (v) => _toggle(t, v),
+                        onTap: () => _openEditor(t),
+                        onDelete: (task) => _delete(task),
+                      ),
+                    );
+                  },
+                ),
+        ),
+      ],
+    );
+
+    if (!widget.showAppBar) {
+      return Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _searchController,
+                    decoration: InputDecoration(
+                      hintText: 'Cari tugas...',
+                      prefixIcon: const Icon(Icons.search),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      isDense: true,
+                    ),
+                    onChanged: (v) => setState(() => _searchQuery = v),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(child: body),
+        ],
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: _isSearching
@@ -172,9 +306,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 decoration: InputDecoration(
                   hintText: 'Cari tugas...',
                   border: InputBorder.none,
-                  hintStyle: const TextStyle(color: Color(0xFF8A8A9E)),
+                  hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5)),
                 ),
-                style: const TextStyle(color: Color(0xFF1E1E2E)),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                 onChanged: (v) => setState(() => _searchQuery = v),
               )
             : const Text('TugasKu',
@@ -251,74 +385,82 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Padding(
-            padding: EdgeInsets.fromLTRB(16, 8, 16, 4),
-            child: Text(
-              'Daftar tugasmu',
+      body: body,
+      floatingActionButton: widget.showAppBar
+          ? FloatingActionButton.extended(
+              backgroundColor: const Color(0xFF6C63FF),
+              foregroundColor: Colors.white,
+              onPressed: () => _openEditor(),
+              icon: const Icon(Icons.add),
+              label: const Text('Tambah Tugas'),
+            )
+          : null,
+    );
+  }
+}
+
+class _ProgressCard extends StatelessWidget {
+  final int total;
+  final int done;
+
+  const _ProgressCard({required this.total, required this.done});
+
+  @override
+  Widget build(BuildContext context) {
+    final progress = total == 0 ? 0.0 : done / total;
+    final percent = (progress * 100).round();
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '$done dari $total tugas selesai',
               style: TextStyle(
-                  fontSize: 16, color: Color(0xFF8A8A9E)),
+                fontWeight: FontWeight.w600,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
             ),
-          ),
-          SizedBox(
-            height: 44,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              itemCount: _categories.length,
-              itemBuilder: (ctx, i) {
-                final c = _categories[i];
-                final selected = c.key == _filter;
-                return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: ChoiceChip(
-                    label: Text(c.label),
-                    selected: selected,
-                    selectedColor: const Color(0xFF6C63FF),
-                    labelStyle: TextStyle(
-                      color: selected
-                          ? Colors.white
-                          : const Color(0xFF1E1E2E),
+            const SizedBox(height: 8),
+            TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0, end: progress),
+              duration: const Duration(milliseconds: 500),
+              curve: Curves.easeOut,
+              builder: (context, value, child) {
+                return Row(
+                  children: [
+                    Expanded(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(6),
+                        child: LinearProgressIndicator(
+                          value: value,
+                          minHeight: 8,
+                          backgroundColor: const Color(0xFFE0E0E0),
+                          color: const Color(0xFF6C63FF),
+                        ),
+                      ),
                     ),
-                    onSelected: (_) =>
-                        setState(() => _filter = c.key),
-                  ),
+                    const SizedBox(width: 12),
+                    Text(
+                      '$percent%',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                      ),
+                    ),
+                  ],
                 );
               },
             ),
-          ),
-          Expanded(
-            child: _visible.isEmpty
-                ? EmptyState(
-                    type: _active.isEmpty
-                        ? EmptyStateType.noTasks
-                        : EmptyStateType.noFiltered,
-                  )
-                : ListView.builder(
-                    itemCount: _visible.length,
-                    itemBuilder: (ctx, i) {
-                      final t = _visible[i];
-                      return TaskCard(
-                        task: t,
-                        onToggle: (v) => _toggle(t, v),
-                        onTap: () => _openEditor(t),
-                        onDelete: () => _delete(t),
-                      );
-                    },
-                  ),
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: const Color(0xFF6C63FF),
-        onPressed: () => _openEditor(),
-        child: const Icon(Icons.add, color: Colors.white),
+          ],
+        ),
       ),
     );
   }
 }
+
 
 class _ThemeToggleButton extends StatelessWidget {
   @override
