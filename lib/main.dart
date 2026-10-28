@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'screens/main_shell.dart';
+import 'screens/splash_screen.dart';
 import 'services/notification_service.dart';
 import 'services/recurring_service.dart';
 import 'services/task_storage.dart';
@@ -83,7 +83,7 @@ class _TugasKuAppState extends State<TugasKuApp> {
           color: Color(0xFF2A2A3E),
         ),
       ),
-      home: const MainShell(),
+      home: const SplashScreen(),
     );
   }
 }

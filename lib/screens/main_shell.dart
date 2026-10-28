@@ -16,12 +16,13 @@ class MainShell extends StatefulWidget {
 
 class _MainShellState extends State<MainShell> {
   int _currentIndex = 0;
+  final GlobalKey<_HomeTabState> _homeTabKey = GlobalKey<_HomeTabState>();
 
-  final List<Widget> _tabs = const [
-    HomeTab(),
-    CompletedScreen(),
-    SettingsScreen(),
-  ];
+  List<Widget> get _tabs => [
+        HomeTab(key: _homeTabKey),
+        const CompletedScreen(showAppBar: false),
+        const SettingsScreen(showAppBar: false),
+      ];
 
   Future<void> _openEditor() async {
     await Navigator.push(
@@ -42,8 +43,7 @@ class _MainShellState extends State<MainShell> {
                 icon: const Icon(Icons.sort),
                 tooltip: 'Urutkan',
                 onPressed: () {
-                  final homeState = context.findAncestorStateOfType<_HomeTabState>();
-                  homeState?._showSortMenu();
+                  _homeTabKey.currentState?.showSortMenu();
                 },
               ),
             ],
@@ -126,8 +126,8 @@ class HomeTab extends StatefulWidget {
 class _HomeTabState extends State<HomeTab> {
   final GlobalKey<HomeScreenState> _homeKey = GlobalKey<HomeScreenState>();
 
-  void _showSortMenu() {
-    (_homeKey.currentState as dynamic)?._showSortMenu();
+  void showSortMenu() {
+    _homeKey.currentState?.showSortMenu();
   }
 
   @override

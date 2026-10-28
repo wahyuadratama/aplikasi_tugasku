@@ -11,7 +11,8 @@ import '../widgets/task_card.dart';
 import 'add_task_screen.dart';
 
 class CompletedScreen extends StatefulWidget {
-  const CompletedScreen({super.key});
+  final bool showAppBar;
+  const CompletedScreen({super.key, this.showAppBar = true});
 
   @override
   State<CompletedScreen> createState() => _CompletedScreenState();
@@ -98,23 +99,27 @@ class _CompletedScreenState extends State<CompletedScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final body = _done.isEmpty
+        ? const EmptyState(type: EmptyStateType.noCompleted)
+        : ListView.builder(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            itemCount: _done.length,
+            itemBuilder: (ctx, i) {
+              final t = _done[i];
+              return TaskCard(
+                task: t,
+                onToggle: (v) => _toggle(t, v),
+                onTap: () => _openEditor(t),
+                onDelete: (task) => _delete(task),
+              );
+            },
+          );
+    if (!widget.showAppBar) {
+      return body;
+    }
     return Scaffold(
       appBar: AppBar(title: const Text('Tugas Selesai')),
-      body: _done.isEmpty
-          ? const EmptyState(type: EmptyStateType.noCompleted)
-          : ListView.builder(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              itemCount: _done.length,
-              itemBuilder: (ctx, i) {
-                final t = _done[i];
-                return TaskCard(
-                  task: t,
-                  onToggle: (v) => _toggle(t, v),
-                  onTap: () => _openEditor(t),
-                  onDelete: (task) => _delete(task),
-                );
-              },
-            ),
+      body: body,
     );
   }
 }

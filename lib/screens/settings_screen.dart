@@ -5,7 +5,8 @@ import '../services/backup_service.dart';
 import '../services/task_storage.dart';
 
 class SettingsScreen extends StatefulWidget {
-  const SettingsScreen({super.key});
+  final bool showAppBar;
+  const SettingsScreen({super.key, this.showAppBar = true});
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -36,51 +37,55 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final body = ListView(
+      children: [
+        // Notifikasi Section
+        _buildSectionHeader('Notifikasi'),
+        _buildSwitchTile(
+          title: 'Aktifkan Notifikasi',
+          subtitle: 'Terima notifikasi dari aplikasi',
+          value: _notificationsEnabled,
+          onChanged: (value) {
+            setState(() => _notificationsEnabled = value);
+            _savePreference('notifications_enabled', value);
+          },
+        ),
+        _buildSwitchTile(
+          title: 'Reminder Deadline',
+          subtitle: 'Ingatkan H-1 dan hari-H pukul 08:00',
+          value: _remindersEnabled,
+          enabled: _notificationsEnabled,
+          onChanged: (value) {
+            setState(() => _remindersEnabled = value);
+            _savePreference('reminders_enabled', value);
+          },
+        ),
+        const Divider(),
+
+        // Tema Section
+        _buildSectionHeader('Tampilan'),
+        _buildThemeSelector(),
+        const Divider(),
+
+        // Data Section
+        _buildSectionHeader('Data'),
+        _buildDataManagement(),
+        const Divider(),
+
+        // Tentang Section
+        _buildSectionHeader('Tentang'),
+        _buildAboutTile(),
+      ],
+    );
+    if (!widget.showAppBar) {
+      return body;
+    }
     return Scaffold(
       appBar: AppBar(
         title: const Text('Pengaturan',
             style: TextStyle(fontWeight: FontWeight.bold)),
       ),
-      body: ListView(
-        children: [
-          // Notifikasi Section
-          _buildSectionHeader('Notifikasi'),
-          _buildSwitchTile(
-            title: 'Aktifkan Notifikasi',
-            subtitle: 'Terima notifikasi dari aplikasi',
-            value: _notificationsEnabled,
-            onChanged: (value) {
-              setState(() => _notificationsEnabled = value);
-              _savePreference('notifications_enabled', value);
-            },
-          ),
-          _buildSwitchTile(
-            title: 'Reminder Deadline',
-            subtitle: 'Ingatkan H-1 dan hari-H pukul 08:00',
-            value: _remindersEnabled,
-            enabled: _notificationsEnabled,
-            onChanged: (value) {
-              setState(() => _remindersEnabled = value);
-              _savePreference('reminders_enabled', value);
-            },
-          ),
-          const Divider(),
-
-          // Tema Section
-          _buildSectionHeader('Tampilan'),
-          _buildThemeSelector(),
-          const Divider(),
-
-          // Data Section
-          _buildSectionHeader('Data'),
-          _buildDataManagement(),
-          const Divider(),
-
-          // Tentang Section
-          _buildSectionHeader('Tentang'),
-          _buildAboutTile(),
-        ],
-      ),
+      body: body,
     );
   }
 

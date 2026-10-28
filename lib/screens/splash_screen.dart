@@ -2,7 +2,7 @@
 import 'package:flutter/material.dart';
 
 import '../utils/app_router.dart';
-import 'home_screen.dart';
+import 'main_shell.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -36,7 +36,7 @@ class _SplashScreenState extends State<SplashScreen>
       if (!mounted) return;
       Navigator.pushReplacement(
         context,
-        slideRoute(const HomeScreen()),
+        slideRoute(const MainShell()),
       );
     });
   }

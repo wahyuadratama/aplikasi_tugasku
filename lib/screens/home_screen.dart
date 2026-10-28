@@ -156,7 +156,7 @@ class HomeScreenState extends State<HomeScreen> {
     _save();
   }
 
-  void _showSortMenu() {
+  void showSortMenu() {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -199,11 +199,11 @@ class HomeScreenState extends State<HomeScreen> {
     final body = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (_active.isNotEmpty)
+        if (_tasks.isNotEmpty)
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
             child: _ProgressCard(
-              total: _active.length,
+              total: _tasks.length,
               done: _tasks.where((t) => t.isDone).length,
             ),
           ),
@@ -335,7 +335,7 @@ class HomeScreenState extends State<HomeScreen> {
             tooltip: 'Menu',
             onSelected: (value) async {
               if (value == 'sort') {
-                _showSortMenu();
+                showSortMenu();
               } else if (value == 'completed') {
                 await Navigator.push(
                   context,
